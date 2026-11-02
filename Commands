@@ -1,0 +1,40 @@
+import time
+import psutil
+
+# Şebeke karbon yoğunluğu ortalamaları (gCO2/kWh)
+GRID_INTENSITY = {
+    "TR": 440,
+    "US": 380,
+    "EU": 275,
+    "GLOBAL_AVG": 475
+}
+
+class EcoTrackCalculator:
+    def __init__(self, region="TR", avg_cpu_wattage=65):
+        self.region = region
+        self.avg_cpu_wattage = avg_cpu_wattage  # Standart masaüstü/sunucu CPU TDP (Watt)
+        self.grid_co2_per_kwh = GRID_INTENSITY.get(region, GRID_INTENSITY["GLOBAL_AVG"])
+
+    def measure_process(self, target_function, *args, **kwargs):
+        """Bir fonksiyonun çalışması sırasındaki enerji ve CO2 tüketimini ölçer."""
+        start_time = time.time()
+        start_cpu_percent = psutil.cpu_percent(interval=None)
+
+        result = target_function(*args, **kwargs)
+
+        duration_seconds = time.time() - start_time
+        avg_cpu_usage = (start_cpu_percent + psutil.cpu_percent(interval=None)) / 2 / 100
+
+        # Güç Tüketimi (kWh) = (Watt * Kullanım Oranı * Saat) / 1000
+        power_consumed_kwh = (self.avg_cpu_wattage * (avg_cpu_usage or 0.5) * (duration_seconds / 3600)) / 1000
+        
+        # Karbon Ayak İzi (gCO2e)
+        co2_emitted_grams = power_consumed_kwh * self.grid_co2_per_kwh
+
+        return {
+            "result": result,
+            "duration_seconds": round(duration_seconds, 4),
+            "energy_kwh": round(power_consumed_kwh, 8),
+            "co2_grams": round(co2_emitted_grams, 6),
+            "tree_equivalent_days": round(co2_emitted_grams / 55, 6) # 1 ağaç günde ~55g CO2 emer
+        }
