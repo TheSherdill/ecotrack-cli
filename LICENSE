@@ -19,3 +19,180 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+Evet, projenin kodlarını yazmak, mimarisini tasarlamak, dosyalarını oluşturmak ve README içeriğini hazırlamak dahil **teknik tüm aşamaları doğrudan ben yapabilirim**.
+
+Aşağıda `ecotrack-cli` projesini bir üst seviyeye taşıyacak temel mimari modülleri, CLI kodlarını ve GitHub dosyalarını hazırladım. Bunları projenize doğrudan ekleyebilirsiniz.
+
+---
+
+### 1. Dinamik Karbon Hesaplama Modülü (`src/calculator.py` veya JS/TS dengi)
+
+Sabit değerler yerine CPU/GPU kullanımı, çalışma süresi ve bölgesel şebeke verisini (Grid Carbon Intensity) kullanarak karbon ayak izi hesaplayan modül:
+
+```python
+import time
+import psutil
+
+# Şebeke karbon yoğunluğu ortalamaları (gCO2/kWh)
+GRID_INTENSITY = {
+    "TR": 440,
+    "US": 380,
+    "EU": 275,
+    "GLOBAL_AVG": 475
+}
+
+class EcoTrackCalculator:
+    def __init__(self, region="TR", avg_cpu_wattage=65):
+        self.region = region
+        self.avg_cpu_wattage = avg_cpu_wattage  # Standart masaüstü/sunucu CPU TDP (Watt)
+        self.grid_co2_per_kwh = GRID_INTENSITY.get(region, GRID_INTENSITY["GLOBAL_AVG"])
+
+    def measure_process(self, target_function, *args, **kwargs):
+        """Bir fonksiyonun çalışması sırasındaki enerji ve CO2 tüketimini ölçer."""
+        start_time = time.time()
+        start_cpu_percent = psutil.cpu_percent(interval=None)
+
+        result = target_function(*args, **kwargs)
+
+        duration_seconds = time.time() - start_time
+        avg_cpu_usage = (start_cpu_percent + psutil.cpu_percent(interval=None)) / 2 / 100
+
+        # Güç Tüketimi (kWh) = (Watt * Kullanım Oranı * Saat) / 1000
+        power_consumed_kwh = (self.avg_cpu_wattage * (avg_cpu_usage or 0.5) * (duration_seconds / 3600)) / 1000
+        
+        # Karbon Ayak İzi (gCO2e)
+        co2_emitted_grams = power_consumed_kwh * self.grid_co2_per_kwh
+
+        return {
+            "result": result,
+            "duration_seconds": round(duration_seconds, 4),
+            "energy_kwh": round(power_consumed_kwh, 8),
+            "co2_grams": round(co2_emitted_grams, 6),
+            "tree_equivalent_days": round(co2_emitted_grams / 55, 6) # 1 ağaç günde ~55g CO2 emer
+        }
+
+```
+
+---
+
+### 2. GitHub Actions Entegrasyonu (`.github/workflows/ecotrack.yml`)
+
+Her `push` veya `pull_request` yapıldığında otomatik çalışan ve CI/CD süreçlerindeki karbon etkisini raporlayan iş akışı dosyası:
+
+```yaml
+name: EcoTrack CI Footprint Audit
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  audit-footprint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install EcoTrack CLI
+      run: |
+        python -m pip install --upgrade pip
+        pip install psutil
+        # Lokal paket kurulumu
+        pip install -e .
+
+    - name: Run Footprint Audit
+      run: |
+        ecotrack audit . --region EU --format markdown > footprint-report.md
+        cat footprint-report.md
+
+    - name: Comment PR with Footprint Report
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('footprint-report.md', 'utf8');
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `### 🌿 EcoTrack Audit Results\n\n${report}`
+          })
+
+```
+
+---
+
+### 3. Profesyonel `README.md` Şablonu
+
+Repoya eklediğiniz an kalitesini artıracak roket tasarımlı dokümantasyon:
+
+```markdown
+# 🌿 EcoTrack CLI
+
+> A lightweight, terminal-first open-source CLI utility to monitor, audit, and optimize carbon footprints in codebases and local execution workflows.
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python Version](https://img.shields.io/badge/python-3.8%2B-brightgreen.svg)
+![CI Footprint Audit](https://github.com/TheSherdill/ecotrack-cli/actions/workflows/ecotrack.yml/badge.svg)
+
+## 🚀 Features
+
+- **⚡ Instant Execution Auditing:** Measure CPU/Memory energy usage and calculate real-time CO2 equivalents.
+- **🌍 Regional Grid Intensity:** Supports localized carbon metrics (TR, EU, US, Global).
+- **🤖 CI/CD Integration:** Embed environmental auditing directly into GitHub Actions pipelines.
+- **📊 Multiple Export Formats:** Output reports in JSON, Markdown, or clean Terminal ASCII tables.
+
+## 📦 Installation
+
+```bash
+git clone [https://github.com/TheSherdill/ecotrack-cli.git](https://github.com/TheSherdill/ecotrack-cli.git)
+cd ecotrack-cli
+pip install -e .
+
+```
+
+## 🛠️ Usage
+
+### 1. Audit Current Directory Dependencies
+
+```bash
+ecotrack audit . --region TR
+
+```
+
+### 2. Measure a Command Execution
+
+```bash
+ecotrack run "python script.py" --export report.json
+
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please check out [CONTRIBUTING.md](CONTRIBUTING.md) for setup details.
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for details.
+
+```
+
+---
+
+<FollowUp label="Hangi dosyanın kurulumuyla devam edelim?" query="ecotrack-cli için CLI giriş noktasını (cli.py / main.py) ve argparse/click komut yapısını tam kod olarak yaz."/>
+
+<ElicitationsGroup message="Dosyaları repona doğrudan aktarabilmem için seçebileceğin adımlar:">
+  <Elicitation label="Complete CLI Source Code" query="ecotrack-cli projesinin tüm CLI giriş noktasını (cli.py) argparse/click modülleriyle eksiksiz yaz."/>
+  <Elicitation label="CONTRIBUTING.md ve LICENSE" query="ecotrack-cli reposu için MIT Lisansı ve CONTRIBUTING.md dosya içeriklerini oluştur."/>
+</ElicitationsGroup>
+
+```
