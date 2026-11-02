@@ -1,28 +1,21 @@
-# ecotrack-cli
-Real-time server carbon footprint &amp; energy consumption monitoring tool.
-# 🌱 EcoTrack: Real-Time Server Carbon Footprint Monitor
+# 🌿 EcoTrack CLI
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+> A lightweight, terminal-first open-source CLI utility to monitor, audit, and optimize carbon footprints in codebases and local execution workflows.
 
-**EcoTrack** is a lightweight, open-source green computing daemon designed to estimate server power usage (kWh) and environmental carbon emissions ($gCO_2eq$) in real-time based on live CPU and RAM usage.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python Version](https://img.shields.io/badge/python-3.8%2B-brightgreen.svg)
+![CI Footprint Audit](https://github.com/TheSherdill/ecotrack-cli/actions/workflows/ecotrack.yml/badge.svg)
 
----
+## 🚀 Features
 
-## 🚀 Key Features
+- **⚡ Instant Execution Auditing:** Measure CPU/Memory energy usage and calculate real-time CO2 equivalents.
+- **🌍 Regional Grid Intensity:** Supports localized carbon metrics (TR, EU, US, Global).
+- **🤖 CI/CD Integration:** Embed environmental auditing directly into GitHub Actions pipelines.
+- **📊 Multiple Export Formats:** Output reports in JSON, Markdown, or clean Terminal ASCII tables.
 
-- ⚡ **Real-time Power Telemetry**: Monitors CPU TDP and memory consumption.
-- 🌎 **Carbon Footprint Estimation**: Translates hardware usage into hourly/daily $CO_2$ emissions using global grid carbon intensity metrics.
-- 🔌 **REST API & CLI Interface**: Seamless integration with Prometheus, Grafana, or local terminal workflows.
-- 🐳 **Lightweight Footprint**: Optimized containerization to minimize monitoring overhead.
-
----
-
-## 🛠️ Quick Start
-
-### 1. Installation
+## 📦 Installation
 
 ```bash
 git clone [https://github.com/TheSherdill/ecotrack-cli.git](https://github.com/TheSherdill/ecotrack-cli.git)
 cd ecotrack-cli
-pip install -r requirements.txt
+pip install -e .
